@@ -25,7 +25,7 @@ spec:
             value: "1"
           - name: ERROR
             value: "1"
-        image: robotshop/rs-load:latest
+        image: robotshop/rs-load:2.1.0
         resources:
           limits:
             cpu: 200m
