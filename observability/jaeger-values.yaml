@@ -1,0 +1,6 @@
+# Jaeger: receives OpenTelemetry traces (OTLP on 4317/4318) and shows them in a web UI (port 16686).
+# Traces are kept in memory: enough for a demo, nothing to store or pay for.
+jaeger:
+  resources:
+    requests: { cpu: 50m, memory: 128Mi }
+    limits: { memory: 512Mi }

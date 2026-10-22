@@ -1,0 +1,44 @@
+# Loki: stores logs. One small "single binary" instance, logs kept on the node (no S3, no disks to pay for).
+deploymentMode: SingleBinary
+
+loki:
+  auth_enabled: false            # one team, one tenant: no login between Fluent Bit and Loki
+  commonConfig:
+    replication_factor: 1        # one copy is enough for a demo
+  storage:
+    type: filesystem
+  schemaConfig:
+    configs:
+      - from: "2024-01-01"
+        store: tsdb
+        object_store: filesystem
+        schema: v13
+        index:
+          prefix: loki_index_
+          period: 24h
+
+singleBinary:
+  replicas: 1
+  persistence:
+    enabled: false               # temporary storage, removed with the pod
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+# Turn off the parts a production Loki needs but a demo doesn't (saves CPU and memory)
+read:
+  replicas: 0
+write:
+  replicas: 0
+backend:
+  replicas: 0
+gateway:
+  enabled: false
+chunksCache:
+  enabled: false
+resultsCache:
+  enabled: false
+lokiCanary:
+  enabled: false
+test:
+  enabled: false

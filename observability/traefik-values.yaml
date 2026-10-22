@@ -1,0 +1,34 @@
+# Traefik: the single public entry point for Robot Shop.
+# Every request passes through it, so it can measure requests, errors and latency per service
+# and send an OpenTelemetry trace for each request to Jaeger.
+
+service:
+  spec:
+    type: LoadBalancer          # the shop's one public address
+
+ports:
+  websecure:
+    expose:
+      default: false            # no HTTPS certificate in this demo, so don't open port 443
+
+# Prometheus metrics, labelled per backend service (catalogue, cart, payment, web)
+metrics:
+  prometheus:
+    addServicesLabels: true
+    addRoutersLabels: true
+    serviceMonitor:
+      enabled: true             # tells Prometheus to scrape Traefik automatically
+
+# OpenTelemetry tracing: send a trace for every request to Jaeger
+tracing:
+  serviceName: traefik
+  sampleRate: 1.0               # trace 100% of requests (fine for a demo; production would sample less)
+  otlp:
+    enabled: true
+    http:
+      enabled: true
+      endpoint: http://jaeger.monitoring.svc:4318/v1/traces
+
+resources:
+  requests: { cpu: 100m, memory: 64Mi }
+  limits: { memory: 256Mi }

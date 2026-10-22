@@ -1,0 +1,56 @@
+# Fluent Bit: runs on every node, reads robot-shop container logs, adds Kubernetes labels,
+# works out a log level, and ships everything to Loki.
+
+luaScripts:
+  level.lua: |
+    -- Give every log record a "level": trace, debug, info, warn, error or fatal
+    local pino = { [10]="trace", [20]="debug", [30]="info", [40]="warn", [50]="error", [60]="fatal" }
+    function set_level(tag, timestamp, record)
+      local lvl = record["level"]
+      if type(lvl) == "number" then
+        record["level"] = pino[lvl] or "info"          -- Node.js services log JSON with numeric levels
+      elseif type(lvl) == "string" then
+        record["level"] = string.lower(lvl)            -- already a word
+      else
+        local text = string.lower(record["log"] or "")  -- plain text: look for keywords
+        if text:find("error") or text:find("exception") then record["level"] = "error"
+        elseif text:find("warn") then record["level"] = "warn"
+        elseif text:find("debug") then record["level"] = "debug"
+        else record["level"] = "info" end
+      end
+      return 2, timestamp, record
+    end
+
+config:
+  inputs: |
+    [INPUT]
+        Name tail
+        Path /var/log/containers/*_robot-shop_*.log
+        multiline.parser docker, cri
+        Tag kube.*
+        Mem_Buf_Limit 5MB
+        Skip_Long_Lines On
+
+  filters: |
+    [FILTER]
+        Name kubernetes
+        Match kube.*
+        Merge_Log On
+        Keep_Log On
+        K8S-Logging.Parser On
+        K8S-Logging.Exclude On
+
+    [FILTER]
+        Name lua
+        Match kube.*
+        script /fluent-bit/scripts/level.lua
+        call set_level
+
+  outputs: |
+    [OUTPUT]
+        Name loki
+        Match kube.*
+        Host loki.logging.svc
+        Port 3100
+        Labels job=fluent-bit, namespace=$kubernetes['namespace_name'], app=$kubernetes['labels']['service'], level=$level
+        Line_Format json

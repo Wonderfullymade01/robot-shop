@@ -1,0 +1,50 @@
+# kube-prometheus-stack: Prometheus + Grafana + Alertmanager, sized small for a 3-node demo cluster.
+# No persistent disks: data lives only while the cluster runs (cheap, nothing left behind on destroy).
+
+prometheus:
+  prometheusSpec:
+    retention: 2d
+    resources:
+      requests: { cpu: 200m, memory: 512Mi }
+      limits: { memory: 1Gi }
+    # Also pick up ServiceMonitors / PodMonitors / alert rules created outside this chart (Traefik, our SLO rules)
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+
+alertmanager:
+  alertmanagerSpec:
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+
+grafana:
+  # Admin login comes from a Kubernetes Secret created by hand, never from Git
+  admin:
+    existingSecret: grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+  # Load dashboards from ConfigMaps labelled grafana_dashboard: "1" (dashboards as code)
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+  # Logs and traces next to metrics, all in one Grafana
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      uid: loki
+      url: http://loki.logging.svc:3100
+    - name: Jaeger
+      type: jaeger
+      uid: jaeger
+      url: http://jaeger.monitoring.svc:16686
+
+# EKS runs the control plane for us, so these can't be scraped; turning them off avoids permanent "down" alerts
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeEtcd:
+  enabled: false
+kubeProxy:
+  enabled: false

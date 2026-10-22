@@ -1,0 +1,54 @@
+# How Traefik sends requests to Robot Shop.
+# The API calls go straight to their service (so Traefik measures each one separately);
+# everything else goes to the web front end.
+
+# Removes the /api/<service> part before forwarding, like Robot Shop's own nginx does
+# (/api/cart/add/1/2 arrives at cart as /add/1/2)
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api-prefix
+  namespace: robot-shop
+spec:
+  stripPrefix:
+    prefixes:
+      - /api/catalogue
+      - /api/cart
+      - /api/payment
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: robot-shop
+  namespace: robot-shop
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: PathPrefix(`/api/catalogue/`)
+      kind: Rule
+      middlewares:
+        - name: strip-api-prefix
+      services:
+        - name: catalogue
+          port: 8080
+    - match: PathPrefix(`/api/cart/`)
+      kind: Rule
+      middlewares:
+        - name: strip-api-prefix
+      services:
+        - name: cart
+          port: 8080
+    - match: PathPrefix(`/api/payment/`)
+      kind: Rule
+      middlewares:
+        - name: strip-api-prefix
+      services:
+        - name: payment
+          port: 8080
+    # Everything else (the shop pages and the other APIs) goes to web, which forwards them itself
+    - match: PathPrefix(`/`)
+      kind: Rule
+      services:
+        - name: web
+          port: 8080
