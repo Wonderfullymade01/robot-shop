@@ -21,6 +21,13 @@ singleBinary:
   replicas: 1
   persistence:
     enabled: false               # temporary storage, removed with the pod
+    # Loki's container is read-only, so give it a writable temporary folder for its data
+  extraVolumes:
+    - name: data
+      emptyDir: {}
+  extraVolumeMounts:
+    - name: data
+      mountPath: /var/loki
   resources:
     requests: { cpu: 100m, memory: 256Mi }
     limits: { memory: 512Mi }

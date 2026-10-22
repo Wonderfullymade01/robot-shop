@@ -24,12 +24,12 @@ spec:
           - name: SILENT
             value: "1"
           - name: ERROR
-            value: "1"
+            value: "0"
         image: robotshop/rs-load:2.1.0
         resources:
           limits:
             cpu: 200m
-            memory: 200Mi
+            memory: 500Mi
           requests:
             cpu: 100m
             memory: 100Mi
