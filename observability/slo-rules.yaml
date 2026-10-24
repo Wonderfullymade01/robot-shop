@@ -1,0 +1,30 @@
+# Availability SLO for Robot Shop (web, catalogue, cart, payment), measured at the Traefik front door.
+#   SLI:  successful requests / all requests   (successful = not a 5xx server error)
+#   SLO:  99% over 30 days  ->  error budget = 1% = about 7.2 hours of failure per 30 days
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: robot-shop-slo
+  namespace: monitoring
+spec:
+  groups:
+    - name: robot-shop-availability
+      rules:
+        # Share of requests that failed over the last 5 minutes (0.01 = 1%)
+        - record: robotshop:error_ratio:rate5m
+          expr: |
+            sum(rate(traefik_service_requests_total{exported_service=~"robot-shop-(web|catalogue|cart|payment)-.*", code=~"5.."}[5m]))
+            /
+            sum(rate(traefik_service_requests_total{exported_service=~"robot-shop-(web|catalogue|cart|payment)-.*"}[5m]))
+
+        # Fast burn: failing at 14.4x the allowed rate (14.4%) would use the whole 30-day budget in ~2 days
+        - alert: RobotShopAvailabilitySLOBurn
+          expr: robotshop:error_ratio:rate5m > (14.4 * 0.01)
+          for: 2m
+          labels:
+            severity: critical
+            slo: availability
+          annotations:
+            summary: "Robot Shop is burning its availability error budget fast"
+            description: "{{ $value | humanizePercentage }} of requests are failing (the SLO allows 1%)."
+            runbook_url: "https://github.com/Wonderfullymade01/robot-shop/blob/master/docs/runbook.md"

@@ -41,12 +41,16 @@ payment:
   # Default is https://www.paypal.com
   gateway: null
   #gateway: https://www.worldpay.com
+  # OpenTelemetry tracing for this one service (guide step 4)
+  tracing:
+    enabled: true
+    endpoint: http://otel-collector.monitoring.svc:4318
 
 rabbitmq: {}
 
 ratings: {}
 
-redis: {} 
+redis: {}
 
 shipping: {}
 

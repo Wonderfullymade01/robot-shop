@@ -1,0 +1,24 @@
+# OpenTelemetry Collector: one central place that receives traces (OTLP) from Traefik and payment
+# and forwards them to Jaeger. Apps only need to know the collector's address, not Jaeger's.
+mode: deployment
+fullnameOverride: otel-collector        # gives the Service the simple name "otel-collector"
+
+image:
+  repository: otel/opentelemetry-collector-k8s
+
+config:
+  exporters:
+    otlp/jaeger:
+      endpoint: jaeger.monitoring.svc:4317   # Jaeger's OTLP gRPC port
+      tls:
+        insecure: true                       # plain traffic inside the cluster
+  service:
+    pipelines:
+      traces:
+        exporters: [otlp/jaeger]
+      metrics: null                          # we only handle traces here
+      logs: null
+
+resources:
+  requests: { cpu: 50m, memory: 128Mi }
+  limits: { memory: 256Mi }

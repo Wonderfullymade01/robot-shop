@@ -12,11 +12,6 @@ prometheus:
     podMonitorSelectorNilUsesHelmValues: false
     ruleSelectorNilUsesHelmValues: false
 
-alertmanager:
-  alertmanagerSpec:
-    resources:
-      requests: { cpu: 50m, memory: 64Mi }
-
 grafana:
   # Admin login comes from a Kubernetes Secret created by hand, never from Git
   admin:
@@ -48,3 +43,34 @@ kubeEtcd:
   enabled: false
 kubeProxy:
   enabled: false
+
+# Alertmanager: send SLO alerts to Slack. The webhook URL is read from a Kubernetes Secret, never from Git.
+alertmanager:
+  alertmanagerSpec:
+    secrets:
+      - alertmanager-slack          # mounted at /etc/alertmanager/secrets/alertmanager-slack/
+  config:
+    route:
+      receiver: "null"              # by default, drop alerts (avoid noise from the built-in rules)
+      group_by: [alertname]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 4h
+      routes:
+        - receiver: slack
+          matchers:
+            - slo = "availability"  # only our SLO alert goes to Slack
+    receivers:
+      - name: "null"
+      - name: slack
+        slack_configs:
+          - api_url_file: /etc/alertmanager/secrets/alertmanager-slack/webhook-url
+            channel: "#alerts"
+            send_resolved: true
+            title: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }}'
+            text: |-
+              {{ range .Alerts }}*{{ .Annotations.summary }}*
+              {{ .Annotations.description }}
+              Runbook: {{ .Annotations.runbook_url }}
+              {{ end }}
+

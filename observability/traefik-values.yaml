@@ -27,7 +27,7 @@ tracing:
     enabled: true
     http:
       enabled: true
-      endpoint: http://jaeger.monitoring.svc:4318/v1/traces
+      endpoint: http://otel-collector.monitoring.svc:4318/v1/traces
 
 resources:
   requests: { cpu: 100m, memory: 64Mi }
