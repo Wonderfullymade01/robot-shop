@@ -21,15 +21,19 @@ spec:
       - name: shipping
         image: {{ .Values.image.repo }}/rs-shipping:{{ .Values.image.version }}
         imagePullPolicy: {{ .Values.image.pullPolicy }}
+        env:
+          # Let Java use up to 75% of the container's memory for its heap (the default is only 25%)
+          - name: JAVA_TOOL_OPTIONS
+            value: "-XX:MaxRAMPercentage=75.0"
         ports:
         - containerPort: 8080
-        # it's Java it needs lots of memory
+        # it's Java: it needs enough CPU for garbage collection, not just memory
         resources:
           limits:
-            cpu: 200m
+            cpu: 1000m
             memory: 1000Mi
           requests:
-            cpu: 100m
+            cpu: 300m
             memory: 500Mi
         readinessProbe:
           httpGet:
